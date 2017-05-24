@@ -1,0 +1,198 @@
+:toc2:
+:toc-title: Sumário
+
+= ESM-A3/2017
+
+[big]#24/05/2017#
+
+image::https://i.imgur.com/a7UBVQu.jpg[alt="PUC-SP", align="center", width=412, height=688]
+
+[big]#Grupo#::
+[options="header"]
+|=========================
+|Nome           |RA
+|Ana Luiza      |00127907
+|Leandro Cabral |00111742
+|Lucas Pratas   |00168432
+|Silmara Alvares|00171752
+|Terso Willis   |00164415
+|=========================
+
+<<<
+
+== Descrição da Aplicação
+
+=== Requisitos
+
+* *Req1:* O jogo tem que ter pelo menos 3 jogadores e no máximo 26.
+
+* *Req2:* As palavras secretas tem que esta no intervalo de 3 a 30 letras, e terá uma validação para ver se a palavra digitada existe.
+
+* *Req3:* Os jogadores terão acesso ao progresso dos demais jogadores
+
+* *Req4:* Caso ocorra desistência dos jogadores e ainda tiver pelo menos 3 jogadores o jogo continua, caso contrario o jogo é finalizado.
+
+* *Req5:* Será estabelecida uma ordem para cada jogador tentar letra por vez.
+
+* *Req6:* Ao escolher tentar palavra o jogador perde ou ganha, ou seja não terá novas oportunidades de tentar letra.
+
+<<<
+
+== Modelo da aplicação
+
+=== Estrutural
+
+image::http://i.imgur.com/B2KVHue.jpg[alt="DCL", align="center", width=1600, height=1600]
+
+=== Comportamental
+
+image::http://i.imgur.com/0jvo3cn.jpg[alt="DME", align="center", width=1500, height=1500]
+
+
+Descrição do Diagrama
+
+Processo se inicia no estado Iniciado , com
+procedimentos de iniciação da máquina até a ação sortearOrdem(), que sorteia a
+ordem dos jogadores, sendo o primeiro e o segundo os Nomeadores (jogadores que
+escolherão as palavras secretas), para então transitar para o estado Aguardando Palavras.
+Em Aguardando Palavras, a máquina espera os 2
+jogadores do tipo Nomeadores selecionarem cada um uma palavra válida para ser a
+palavra secreta, com o evento secreta1Selec(palavra) e secreta2Selec(palavra) e
+os guardas secreta1Valida?(palavra) e secreta2Valida?(palavra), transitando
+para o Selecionando vez do super-estado Jogando.
+
+Caso um jogador encerre o jogo no estado Aguardando
+Palavras, ocorrerá o evento jogadorSaiu(jogador). Então, há uma seleção com
+o guarda nomeador?(jogador) para caso o jogador que saia seja um nomeador, o
+jogo seja Encerrando por não ser
+possível gerar as 2 palavras secretas. Caso o jogador não seja o nomeador, ele
+será removido no estado Removendo Jogador e então voltará pra o estado Aguardando
+Palavras após a ação removerJogador(jogadores).
+
+No super-estado Jogando, a qualquer momento um
+jogador pode encerrar o jogo, provocando o evento jogadorSaiu(jogador). Então, ele
+será removido no estado Removendo Jogador e após a ação removerJogador(jogadores) há uma
+seleção com o guarda jogadoresMinimo?(). Caso não haja a quantidade mínima de
+jogadores, um, há uma transição para o estado Encerrado. Caso haja,
+ocorrerá uma seleção com o guarda jogadorAtivo?(jogador). Se o jogador que saio
+for o jogador ativo, quem deve gerar os eventos alem de jogadorSaiu(jogador) no
+estado jogando, há uma transição para o estado Selecionando Vez. Porem,
+se o jogador não for o ativo, há uma transição para o estado anterior no
+super-estado Jogando, através do pseudo estado "H".
+
+O estado Selecionando Vez possui procedimentos que selecionam o jogador
+ativo (jogador que gera os eventos além de jogadorSaiu(jogador), no estado
+jogando) a partir dos jogadores não removidos da ordem. Após isso, o jogador
+ativo poderá gerar o evento escolherTentativa(tentativa), para escolher se irá
+tentar acertar uma palavra ou uma letra na sua vez. A seleção com guardas
+tentarPalavra?(tentativa) transita para o estado Aguardando Palavra se
+retornar um valor afirmativo, ou transita
+para o estado Aguardando Letra se retornar um valor negativo.
+
+No estado Aguardando Palavra, o evento enviarPalavra(palavra,secreta)
+com o guarda palavraValida?(palavra) transita para uma seleção. Esse evento é
+gerado quando o jogador ativo envia uma palavra e a secreta relacionada, para
+tentar acerta-la. O guarda palavraValida?(palavra) garante que apenas uma
+palavra valida, entre 3 e 30 caracteres, possa ser enviada. Caso a seleção com
+o guarda acertouPalavra? (palavra,secreta) retorne um valor afirmativo, ocorre
+uma transição para o estado Ganhou, caso contrario a transição será para
+o estado Enforcando Jogador.
+
+O estado Ganhou termina seus procedimentos com a
+ação enviarVencedor(jogador), atribuindo o jogador vencedor e transitando para
+o estado Fim do Jogo, que por sua vez termina seus procedimetos com a
+ação terminarJogo(fator), sendo esse fator o de vitória ou de derrota, que
+mostra para os jogadores uma mensagem de fim de jogo e então transitar para o
+estado Encerrado.
+
+O estado Enforcando Jogador remove o jogador ativo e
+então transita para uma seleção com o guarda jogadoresMinimo?(). Se o número de
+jogadores ainda está de acordo com o mínimo (um), então transita-se para o
+estado Selecionando Vez. Caso contrário, transita-se para o estado Fim
+do Jogo.
+
+O estado Aguardando Letra aguarda o evento
+enviarLetra(letra) com o guarda letraValida?(letra). Quando o jogador tentar
+uma letra valida (1 caractere dos 24 do alfabeto português). Com o evento
+validado pelo guarda, há uma transição para a seleção com o guarda
+acertouLetra?(letra). Caso a letra enviada esteja em alguma das posições não
+reveladas das palavras secretas, acertouLetra?(letra) retornará um valor
+positivo e os procedimentos relacionados a esse acerto, como colocar a mostrar
+a letra acertada, ocorrerão no estado Acertou, para então transitar
+novamente para o estado Selecionando Vez com a ação passarVez(). Caso
+contrario, ocorrerá uma transição para o estado Errou.
+
+No estado Errou, ocorrem procedimentos como o
+aumento no número de membros visíveis, para então transitar com a ação
+passarVez() para a seleção com o guarda minimoMembros?(jogador). Caso o jogador
+ativo ainda tenha o número mínimo de membros para tentar jogar, ocorre uma
+transição para o estado Selecionando Vez. Caso contrário, transita-se
+para o estado Enforcando Jogador.
+
+O estado encerrado encerra a máquina para então terminar a
+execução.
+
+Descrição dos eventos e ações :
+
+. sortearOrdem() = sorteia a ordem dos jogadores, sendo o
+primeiro e o segundo os Nomeadores (jogadores que escolherão as palavras
+secretas).
+
+. secreta1Selec(palavra) e secreta2Selec(palavra) = atribui
+a primeira e a segunda palavra secreta com seus respectivos parâmetros.
+
+. secreta1Valida?(palavra) e secreta2Valida?(palavra) =
+retorna um valor afirmativo, caso a palavra seja válida como palavra secreta
+(esteja dentro do dicionário) ou negativo caso contrário.
+
+. jogadorSaiu(jogador) = evento para jogador saindo da
+aplicação abrubtamente.
+
+. nomeador?(jogador) = retorna se o jogador como parâmetro
+é do tipo nomeador ou não como um valor booleano (afirmativo ou negativo).
+
+. removerJogador(jogadores) = remove o jogador como
+parâmetro da ordem.
+
+. jogadoresMinimo?() = retorna um valor afirmativo, caso
+haja uma quantidade mínima de jogadores (um). Caso contrário, retorna um valor
+negativo.
+
+. jogadorAtivo?(jogador) = retorna um valor afirmativo,
+caso haja uma o jogador como parâmetro seja o ativo. Caso contrário, retorna um
+valor negativo.
+
+. escolherTentativa(tentativa) = envia o tipo de tentativa
+escolhida pelo jogador, sendo tentar palavra ou não tentar palavra
+
+. tentarPalavra?(tentativa)
+
+. enviarPalavra(palavra,secreta)
+
+. palavraValida?(palavra)
+
+. acertouPalavra? (palavra,secreta)
+
+. enviarVencedor(jogador)
+
+. terminarJogo(fator) 
+
+. enviarLetra(letra)
+
+. letraValida?(letra)
+
+. acertouLetra?(letra)
+
+. passarVez()
+
+. minimoMembros?(jogador)
+
+<<<
+
+== Exemplos de ultilização 
+
+image::http://i.imgur.com/R9L7npk.jpg[alt="ICA1", align="center", width=1500, height=1500]
+
+image::http://i.imgur.com/TaLUjeM.jpg[alt="ICA2", align="center", width=1500, height=1500]
+
+image::http://i.imgur.com/w3jfc7L.jpg[alt="ICA3", align="center", width=1500, height=1500]
